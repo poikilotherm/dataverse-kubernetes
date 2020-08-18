@@ -27,7 +27,7 @@ do
   if [ -f ${SECRETS_DIR}/$alias/password ]; then
     echo "INFO: Defining password alias for $alias"
     cat ${SECRETS_DIR}/$alias/password | sed -e "s#^#AS_ADMIN_ALIASPASSWORD=#" > ${SECRETS_DIR}/${alias}_asadmin
-    echo "create-password-alias ${alias}_password_alias --passwordfile ${SECRETS_DIR}/${alias}_asadmin" >> ${DV_POSTBOOT}
+    echo "create-password-alias dataverse.${alias}.password --passwordfile ${SECRETS_DIR}/${alias}_asadmin" >> ${DV_POSTBOOT}
   else
     echo "WARNING: Could not find 'password' secret for ${alias} in ${SECRETS_DIR}. Check your Kubernetes Secrets and their mounting!"
   fi
@@ -62,10 +62,14 @@ create-admin-object --restype=javax.jms.Queue --raname=jmsra --property=Name=Dat
 EOF
 
 # JDBC
-echo "INFO: Defining JDBC resources."
-echo "create-jdbc-connection-pool --restype=javax.sql.DataSource --datasourceclassname=org.postgresql.ds.PGPoolingDataSource --property=create=true:User=${POSTGRES_USER}:PortNumber=${POSTGRES_PORT}:databaseName=${POSTGRES_DATABASE}:ServerName=${POSTGRES_SERVER} dvnDbPool" >> ${DV_POSTBOOT}
-echo 'set resources.jdbc-connection-pool.dvnDbPool.property.password=${ALIAS=db_password_alias}' >> ${DV_POSTBOOT}
-echo "create-jdbc-resource --connectionpoolid=dvnDbPool jdbc/VDCNetDS" >> ${DV_POSTBOOT}
+#echo "INFO: Defining JDBC resources."
+#echo "create-jdbc-connection-pool --restype=javax.sql.DataSource --datasourceclassname=org.postgresql.ds.PGPoolingDataSource --property=create=true:User=${POSTGRES_USER}:PortNumber=${POSTGRES_PORT}:databaseName=${POSTGRES_DATABASE}:ServerName=${POSTGRES_SERVER} dvnDbPool" >> ${DV_POSTBOOT}
+#echo 'set resources.jdbc-connection-pool.dvnDbPool.property.password=${ALIAS=db_password_alias}' >> ${DV_POSTBOOT}
+#echo "create-jdbc-resource --connectionpoolid=dvnDbPool jdbc/VDCNetDS" >> ${DV_POSTBOOT}
+echo "create-system-properties dataverse.db.user=${POSTGRES_USER}" >> ${DV_POSTBOOT}
+echo "create-system-properties dataverse.db.host=${POSTGRES_SERVER}" >> ${DV_POSTBOOT}
+echo "create-system-properties dataverse.db.port=${POSTGRES_PORT}" >> ${DV_POSTBOOT}
+echo "create-system-properties dataverse.db.name=${POSTGRES_DATABASE}" >> ${DV_POSTBOOT}
 
 # JavaMail
 echo "INFO: Defining JavaMail."
@@ -73,7 +77,7 @@ echo "create-javamail-resource --mailhost=${MAIL_SERVER} --mailuser=dataversenot
 
 echo "INFO: defining miscellaneous configuration options."
 # Timer data source
-echo "set configs.config.server-config.ejb-container.ejb-timer-service.timer-datasource=jdbc/VDCNetDS" >> ${DV_POSTBOOT}
+echo "set configs.config.server-config.ejb-container.ejb-timer-service.timer-datasource=java:global/jdbc/dataverse" >> ${DV_POSTBOOT}
 # AJP connector
 echo "create-network-listener --protocol=http-listener-1 --listenerport=8009 --jkenabled=true jk-connector" >> ${DV_POSTBOOT}
 # Disable logging for grizzly SSL problems -- commented out as this is not GF 4.1
